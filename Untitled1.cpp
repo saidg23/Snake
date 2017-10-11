@@ -1,7 +1,16 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
 #include <SFML/Graphics.hpp>
+
+enum GameState
+{
+    MENU,
+    PLAY,
+    GAMEOVER,
+    QUIT,
+};
 
 enum Direction
 {
@@ -31,40 +40,24 @@ int getRandomNumber(int min, int max)
     return static_cast<int>(rand() * fraction * (max - min + 1) + min);
 }
 
-Direction getdir(bool &inputLogged, Direction dir, Direction prevDir)
+Direction getdir()
 {
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-    {
-        inputLogged = true;
-        dir = UP;
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-    {
-        inputLogged = true;
-        dir = DOWN;
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-    {
-        inputLogged = true;
-        dir = LEFT;
-    }
-    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-    {
-        inputLogged = true;
-        dir = RIGHT;
-    }
+    Direction dir;
 
-    if(dir == UP && prevDir == DOWN)
-        return prevDir;
-    else if(dir == DOWN && prevDir == UP)
-        return prevDir;
-    else if(dir == LEFT && prevDir == RIGHT)
-        return prevDir;
-    else if(dir == RIGHT && prevDir == LEFT)
-        return prevDir;
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        dir = LEFT;
+    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+        dir = RIGHT;
+    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+        dir = UP;
+    else if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+        dir = DOWN;
     else
-        return dir;
+        dir = NONE;
+
+    return dir;
 }
+
 
 int main()
 {
@@ -77,7 +70,7 @@ int main()
     int yres = 600;
 
     sf::RenderWindow win(sf::VideoMode(xres, yres), "SNAKE? SNAAAAAAAAAAAAAKE!!!", sf::Style::Default, settings);
-    win.setFramerateLimit(60);
+    win.setFramerateLimit(240);
 
     int gridX = 30;
     int gridY = 30;
@@ -101,97 +94,190 @@ int main()
     Segment snake[gridX * gridY]{{10, 10}, {9, 10}, {8, 10}};
     int snakeLength = 3;
 
-    bool inputLogged = false;
-    Direction prevDir;
-    Direction dir = RIGHT;
+    int delay = 30;
 
-    Food food;
+    bool menuFlag = true;
 
-    int delay = 10;
+    sf::Font inconsolata;
+    inconsolata.loadFromFile("Inconsolata.ttf");
+
+    int titleProportion = 10;
+    int titleFontSize = xres / titleProportion;
+    sf::Text title;
+    title.setFont(inconsolata);
+    title.setString("SNAKE");
+    title.setCharacterSize(titleFontSize);
+    title.setFillColor(sf::Color::White);
+    title.setOrigin((titleFontSize*2.5)/2, titleFontSize/2);
+    title.setPosition(xres/2.0, yres/5.0);
+
+    int menuProportion = 15;
+    int menuFontSize = xres / menuProportion;
+    sf::Text playButton;
+    playButton.setFont(inconsolata);
+    playButton.setString("Play");
+    playButton.setCharacterSize(menuFontSize);
+    playButton.setFillColor(sf::Color::White);
+    playButton.setOrigin((menuFontSize*2)/2, round(menuFontSize/2.0));
+    playButton.setPosition(xres/2, yres/2);
+    int menuLeftBound;
+    int menuRightBound;
+    int playUpperBound;
+    int playLowerBound;
+
+    sf::Text quitButton;
+    quitButton.setFont(inconsolata);
+    quitButton.setString("Quit");
+    quitButton.setCharacterSize(menuFontSize);
+    quitButton.setFillColor(sf::Color::White);
+    quitButton.setOrigin((menuFontSize*2)/2, round(menuFontSize/2.0));
+    quitButton.setPosition(xres/2, yres/1.7);
+    int quitUpperBound;
+    int quitLowerBound;
+
+    GameState gameState = MENU;
+
     while(win.isOpen())
     {
-        --delay;
         sf::Event event;
-        while(win.pollEvent(event))
-        {
-            if(event.type == sf::Event::Closed)
-                win.close();
-        }
 
-        //clears screen and grid
-        win.clear(sf::Color(81, 81, 81));
-        for(int iX = 0; iX < gridX; ++iX)
+        while(gameState == MENU)
         {
-            for(int iY = 0; iY < gridY; ++iY)
+            while(win.pollEvent(event))
             {
-                grid[iX][iY].setFillColor(sf::Color(81, 81, 81));
-            }
-        }
-
-        //places food in random place
-        if(!food.active)
-        {
-            food.xpos = getRandomNumber(0, gridX-1);
-            food.ypos = getRandomNumber(0, gridY-1);
-            food.active = true;
-        }
-        grid[food.xpos][food.ypos].setFillColor(sf::Color::Blue);
-
-        //draws snake on the grid
-        for(int i = 0; i < snakeLength; ++i)
-        {
-            grid[snake[i].xpos][snake[i].ypos].setFillColor(sf::Color::White);
-        }
-
-        //draws the grid
-        for(int iX = 0; iX < gridX; ++iX)
-        {
-            for(int iY = 0; iY < gridY; ++iY)
-            {
-                win.draw(grid[iX][iY]);
-            }
-        }
-
-        //gets user input and checks valid direction
-        if(!inputLogged)
-        {
-            prevDir = dir;
-            dir = getdir(inputLogged, dir, prevDir);
-        }
-
-        if(delay == 0)
-        {
-            //
-            for(int i = snakeLength-1; i > 0; --i)
-            {
-                snake[i] = snake[i-1];
+                if(event.type == sf::Event::Closed)
+                {
+                    win.close();
+                    gameState = QUIT;
+                }
             }
 
-            switch(dir)
+            win.clear(sf::Color(81, 81, 81));
+            win.draw(title);
+            win.draw(playButton);
+            win.draw(quitButton);
+
+            sf::Vector2i mousePos = sf::Mouse::getPosition(win);
+            menuLeftBound = playButton.getPosition().x - (playButton.getLocalBounds().width / 2);
+            menuRightBound = playButton.getPosition().x + (playButton.getLocalBounds().width / 2);
+
+            playUpperBound = playButton.getPosition().y - (playButton.getLocalBounds().height/2.5);
+            playLowerBound = playButton.getPosition().y + (playButton.getLocalBounds().height/1.5);
+            if(mousePos.x > menuLeftBound && mousePos.x < menuRightBound && mousePos.y > playUpperBound && mousePos.y < playLowerBound)
             {
-                case UP:    snake[0].ypos -= 1; break;
-                case DOWN:  snake[0].ypos += 1; break;
-                case LEFT:  snake[0].xpos -= 1; break;
-                case RIGHT: snake[0].xpos += 1; break;
-                default:    snake[0].xpos += 1; break;
+                playButton.setColor(sf::Color::Red);
+                if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+                    gameState = PLAY;
+            }
+            else
+                playButton.setColor(sf::Color::White);
+
+            quitUpperBound = quitButton.getPosition().y - (quitButton.getLocalBounds().height/2.5);
+            quitLowerBound = quitButton.getPosition().y + (quitButton.getLocalBounds().height/1.5);
+            if(mousePos.x > menuLeftBound && mousePos.x < menuRightBound && mousePos.y > quitUpperBound && mousePos.y < quitLowerBound)
+                quitButton.setColor(sf::Color::Red);
+            else
+                quitButton.setColor(sf::Color::White);
+
+
+            win.display();
+        }
+
+        while(gameState == PLAY)
+        {
+            while(win.pollEvent(event))
+            {
+                if(event.type == sf::Event::Closed)
+                {
+                    win.close();
+                    gameState = QUIT;
+                }
+            }
+            --delay;
+
+            //clears screen and grid
+            win.clear(sf::Color(81, 81, 81));
+            for(int iX = 0; iX < gridX; ++iX)
+            {
+                for(int iY = 0; iY < gridY; ++iY)
+                {
+                    grid[iX][iY].setFillColor(sf::Color(81, 81, 81));
+                }
             }
 
-            //Out of bounds detection
+            //places food in random place
+            static Food food;
+            if(!food.active)
+            {
+                food.xpos = getRandomNumber(0, gridX-1);
+                food.ypos = getRandomNumber(0, gridY-1);
+                food.active = true;
+            }
+            grid[food.xpos][food.ypos].setFillColor(sf::Color::Blue);
+
+            //draws snake on the grid
+            for(int i = 0; i < snakeLength; ++i)
+            {
+                grid[snake[i].xpos][snake[i].ypos].setFillColor(sf::Color::White);
+            }
+
+            //draws the grid
             if(snake[0].xpos >= gridX || snake[0].xpos < 0 || snake[0].ypos >= gridY || snake[0].ypos < 0)
                 return 0;
 
-            delay = 10;
-            inputLogged = false;
-        }
+            for(int iX = 0; iX < gridX; ++iX)
+            {
+                for(int iY = 0; iY < gridY; ++iY)
+                {
+                    win.draw(grid[iX][iY]);
+                }
+            }
 
-        if(snake[0].xpos == food.xpos && snake[0].ypos == food.ypos)
-        {
-            ++snakeLength;
-            snake[snakeLength-1] = snake[snakeLength-2];
-            food.active = false;
-        }
+            //gets user input and checks valid direction
+            static Direction dir = RIGHT;
+            static Direction prevDir = RIGHT;
+            dir = getdir();
 
-        win.display();
+            if(dir == NONE)
+                dir = prevDir;
+
+            if(delay == 0)
+            {
+                if(prevDir == UP && dir == DOWN)
+                    dir = prevDir;
+                else if(prevDir == DOWN && dir == UP)
+                    dir = prevDir;
+                else if(prevDir == LEFT && dir == RIGHT)
+                    dir = prevDir;
+                else if(prevDir == RIGHT && dir == LEFT)
+                    dir = prevDir;
+
+                for(int i = snakeLength; i > 0; --i)
+                    snake[i] = snake[i-1];
+
+                prevDir = dir;
+
+                switch(dir)
+                {
+                    case UP:    snake[0].ypos -= 1; break;
+                    case DOWN:  snake[0].ypos += 1; break;
+                    case LEFT:  snake[0].xpos -= 1; break;
+                    case RIGHT: snake[0].xpos += 1; break;
+                    default:    snake[0].xpos += 1; break;
+                }
+
+                delay = 30;
+            }
+
+            if(snake[0].xpos == food.xpos && snake[0].ypos == food.ypos)
+            {
+                ++snakeLength;
+                snake[snakeLength-1] = snake[snakeLength-2];
+                food.active = false;
+            }
+
+            win.display();
+        }
     }
 
     return 0;
