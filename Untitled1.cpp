@@ -222,9 +222,6 @@ int main()
             }
 
             //draws the grid
-            if(snake[0].xpos >= gridX || snake[0].xpos < 0 || snake[0].ypos >= gridY || snake[0].ypos < 0)
-                return 0;
-
             for(int iX = 0; iX < gridX; ++iX)
             {
                 for(int iY = 0; iY < gridY; ++iY)
@@ -269,6 +266,23 @@ int main()
                 delay = 30;
             }
 
+            if(snake[0].xpos >= gridX || snake[0].xpos < 0 || snake[0].ypos >= gridY || snake[0].ypos < 0)
+            {
+                dir = RIGHT;
+                prevDir = RIGHT;
+                gameState = GAMEOVER;
+            }
+
+            for(int i = 1; i < snakeLength; ++i)
+            {
+                if(snake[0].xpos == snake[i].xpos && snake[0].ypos == snake[i].ypos)
+                {
+                    dir = RIGHT;
+                    prevDir = RIGHT;
+                    gameState = GAMEOVER;
+                }
+            }
+
             if(snake[0].xpos == food.xpos && snake[0].ypos == food.ypos)
             {
                 ++snakeLength;
@@ -277,6 +291,16 @@ int main()
             }
 
             win.display();
+        }
+
+        while(gameState == GAMEOVER)
+        {
+            snake[0] = {10, 10};
+            snake[1] = {9, 10};
+            snake[2] = {8, 10};
+
+            snakeLength = 3;
+            gameState = MENU;
         }
     }
 
