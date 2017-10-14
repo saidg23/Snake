@@ -68,12 +68,12 @@ int main()
 
     int xres = 800;
     int yres = 600;
-
+    int delayVal = 40;
     sf::RenderWindow win(sf::VideoMode(xres, yres), "SNAKE? SNAAAAAAAAAAAAAKE!!!", sf::Style::Default, settings);
     win.setFramerateLimit(240);
 
-    int gridX = 30;
-    int gridY = 30;
+    int gridX = 15;
+    int gridY = 15;
 
     int tileSize = yres/gridY;
     int centerOffset = (xres - (tileSize * gridX))/2;
@@ -94,7 +94,7 @@ int main()
     Segment snake[gridX * gridY]{{10, 10}, {9, 10}, {8, 10}};
     int snakeLength = 3;
 
-    int delay = 30;
+    int delay = delayVal;
 
     bool menuFlag = true;
 
@@ -175,7 +175,11 @@ int main()
             quitUpperBound = quitButton.getPosition().y - (quitButton.getLocalBounds().height/2.5);
             quitLowerBound = quitButton.getPosition().y + (quitButton.getLocalBounds().height/1.5);
             if(mousePos.x > menuLeftBound && mousePos.x < menuRightBound && mousePos.y > quitUpperBound && mousePos.y < quitLowerBound)
+            {
                 quitButton.setColor(sf::Color::Red);
+                if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+                    return 0;
+            }
             else
                 quitButton.setColor(sf::Color::White);
 
@@ -191,7 +195,7 @@ int main()
                 {
                     win.close();
                     gameState = QUIT;
-                }
+                }    Segment snake[gridX * gridY]{{10, 10}, {9, 10}, {8, 10}};
             }
             --delay;
 
@@ -207,11 +211,22 @@ int main()
 
             //places food in random place
             static Food food;
-            if(!food.active)
+            while(!food.active)
             {
+                food.active = true;
                 food.xpos = getRandomNumber(0, gridX-1);
                 food.ypos = getRandomNumber(0, gridY-1);
-                food.active = true;
+
+                std::cout << "\n\n\n" << food.xpos << ", " << food.ypos << "\n\n";
+                for(int i = 0; i < snakeLength; ++i)
+                {
+                    std::cout << snake[i].xpos << ", " << snake[i].ypos << '\n';
+                    if(snake[i].xpos == food.xpos && snake[i].ypos == food.ypos)
+                    {
+                        food.active = false;
+                        break;
+                    }
+                }
             }
             grid[food.xpos][food.ypos].setFillColor(sf::Color::Blue);
 
@@ -263,7 +278,7 @@ int main()
                     default:    snake[0].xpos += 1; break;
                 }
 
-                delay = 30;
+                delay = delayVal;
             }
 
             if(snake[0].xpos >= gridX || snake[0].xpos < 0 || snake[0].ypos >= gridY || snake[0].ypos < 0)
