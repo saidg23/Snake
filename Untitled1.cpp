@@ -8,8 +8,9 @@ enum GameState
 {
     MENU,
     PLAY,
+    WIN,
     GAMEOVER,
-    QUIT,
+    QUIT
 };
 
 enum Direction
@@ -18,7 +19,8 @@ enum Direction
     DOWN,
     LEFT,
     RIGHT,
-    NONE
+    NONE,
+    HOLD
 };
 
 struct Segment
@@ -68,12 +70,12 @@ int main()
 
     int xres = 800;
     int yres = 600;
-    int delayVal = 40;
+    int delayVal = 50;
     sf::RenderWindow win(sf::VideoMode(xres, yres), "SNAKE? SNAAAAAAAAAAAAAKE!!!", sf::Style::Default, settings);
     win.setFramerateLimit(240);
 
-    int gridX = 15;
-    int gridY = 15;
+    int gridX = 20;
+    int gridY = 20;
 
     int tileSize = yres/gridY;
     int centerOffset = (xres - (tileSize * gridX))/2;
@@ -90,13 +92,12 @@ int main()
             grid[iX][iY].setOutlineColor(sf::Color(58, 232, 75));
         }
     }
-
+    Segment defaultPos[gridX * gridY]{{10, 10}, {9, 10}, {8, 10}};
     Segment snake[gridX * gridY]{{10, 10}, {9, 10}, {8, 10}};
+
     int snakeLength = 3;
 
     int delay = delayVal;
-
-    bool menuFlag = true;
 
     sf::Font inconsolata;
     inconsolata.loadFromFile("Inconsolata.ttf");
@@ -118,7 +119,7 @@ int main()
     playButton.setString("Play");
     playButton.setCharacterSize(menuFontSize);
     playButton.setFillColor(sf::Color::White);
-    playButton.setOrigin((menuFontSize*2)/2, round(menuFontSize/2.0));
+    playButton.setOrigin(menuFontSize, round(menuFontSize/2.0));
     playButton.setPosition(xres/2, yres/2);
     int menuLeftBound;
     int menuRightBound;
@@ -165,23 +166,25 @@ int main()
             playLowerBound = playButton.getPosition().y + (playButton.getLocalBounds().height/1.5);
             if(mousePos.x > menuLeftBound && mousePos.x < menuRightBound && mousePos.y > playUpperBound && mousePos.y < playLowerBound)
             {
-                playButton.setColor(sf::Color::Red);
+                playButton.setFillColor(sf::Color::Red);
                 if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
                     gameState = PLAY;
             }
             else
-                playButton.setColor(sf::Color::White);
+                playButton.setFillColor(sf::Color::White);
 
             quitUpperBound = quitButton.getPosition().y - (quitButton.getLocalBounds().height/2.5);
             quitLowerBound = quitButton.getPosition().y + (quitButton.getLocalBounds().height/1.5);
             if(mousePos.x > menuLeftBound && mousePos.x < menuRightBound && mousePos.y > quitUpperBound && mousePos.y < quitLowerBound)
             {
-                quitButton.setColor(sf::Color::Red);
+                quitButton.setFillColor(sf::Color::Red);
                 if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+                {
                     return 0;
+                }
             }
             else
-                quitButton.setColor(sf::Color::White);
+                quitButton.setFillColor(sf::Color::White);
 
 
             win.display();
@@ -195,7 +198,7 @@ int main()
                 {
                     win.close();
                     gameState = QUIT;
-                }    Segment snake[gridX * gridY]{{10, 10}, {9, 10}, {8, 10}};
+                }
             }
             --delay;
 
@@ -217,10 +220,8 @@ int main()
                 food.xpos = getRandomNumber(0, gridX-1);
                 food.ypos = getRandomNumber(0, gridY-1);
 
-                std::cout << "\n\n\n" << food.xpos << ", " << food.ypos << "\n\n";
                 for(int i = 0; i < snakeLength; ++i)
                 {
-                    std::cout << snake[i].xpos << ", " << snake[i].ypos << '\n';
                     if(snake[i].xpos == food.xpos && snake[i].ypos == food.ypos)
                     {
                         food.active = false;
@@ -246,9 +247,13 @@ int main()
             }
 
             //gets user input and checks valid direction
-            static Direction dir = RIGHT;
-            static Direction prevDir = RIGHT;
-            dir = getdir();
+            static Direction dir = HOLD;
+            static Direction prevDir = HOLD;
+
+            if(getdir() != NONE)
+            {
+                dir = getdir();
+            }
 
             if(dir == NONE)
                 dir = prevDir;
@@ -264,8 +269,11 @@ int main()
                 else if(prevDir == RIGHT && dir == LEFT)
                     dir = prevDir;
 
-                for(int i = snakeLength; i > 0; --i)
-                    snake[i] = snake[i-1];
+                if(dir != HOLD)
+                {
+                    for(int i = snakeLength; i > 0; --i)
+                        snake[i] = snake[i-1];
+                }
 
                 prevDir = dir;
 
@@ -275,7 +283,7 @@ int main()
                     case DOWN:  snake[0].ypos += 1; break;
                     case LEFT:  snake[0].xpos -= 1; break;
                     case RIGHT: snake[0].xpos += 1; break;
-                    default:    snake[0].xpos += 1; break;
+                    default:    break;
                 }
 
                 delay = delayVal;
@@ -283,8 +291,8 @@ int main()
 
             if(snake[0].xpos >= gridX || snake[0].xpos < 0 || snake[0].ypos >= gridY || snake[0].ypos < 0)
             {
-                dir = RIGHT;
-                prevDir = RIGHT;
+                dir = HOLD;
+                prevDir = HOLD;
                 gameState = GAMEOVER;
             }
 
@@ -292,8 +300,8 @@ int main()
             {
                 if(snake[0].xpos == snake[i].xpos && snake[0].ypos == snake[i].ypos)
                 {
-                    dir = RIGHT;
-                    prevDir = RIGHT;
+                    dir = HOLD;
+                    prevDir = HOLD;
                     gameState = GAMEOVER;
                 }
             }
@@ -305,18 +313,75 @@ int main()
                 food.active = false;
             }
 
+            if(snakeLength == gridX * gridY)
+                gameState = WIN;
+
             win.display();
+        }
+
+        while(gameState == WIN)
+        {
+            while(win.pollEvent(event))
+            {
+                if(event.type == sf::Event::Closed)
+                {
+                    win.close();
+                    gameState = QUIT;
+                }
+            }
+
+            win.clear();
+
+            sf::Text youWin;
+            youWin.setString("YOU WIN!");
+            youWin.setFont(inconsolata);
+            youWin.setCharacterSize(xres/ 10);
+            youWin.setOrigin((xres/ 10)*2, (yres/10)/2);
+            youWin.setPosition(xres/2, yres/2);
+            youWin.setFillColor(sf::Color::White);
+            win.draw(youWin);
+            win.display();
+
+            sf::Vector2i mousePos = sf::Mouse::getPosition(win);
+            if(mousePos.x >= 0 && mousePos.x < xres && mousePos.y >= 0 && mousePos.y < yres)
+                if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+                    gameState = MENU;
         }
 
         while(gameState == GAMEOVER)
         {
-            snake[0] = {10, 10};
-            snake[1] = {9, 10};
-            snake[2] = {8, 10};
+            while(win.pollEvent(event))
+            {
+                if(event.type == sf::Event::Closed)
+                {
+                    win.close();
+                    gameState = QUIT;
+                }
+            }
 
-            snakeLength = 3;
-            gameState = MENU;
+            win.clear();
+
+            sf::Text youLose;
+            youLose.setString("GAME OVER!");
+            youLose.setFont(inconsolata);
+            youLose.setCharacterSize(xres/ 10);
+            youLose.setOrigin((xres/ 10)*2, (yres/10)/2);
+            youLose.setPosition(xres/2, yres/2);
+            youLose.setFillColor(sf::Color::White);
+            win.draw(youLose);
+            win.display();
+
+            sf::Vector2i mousePos = sf::Mouse::getPosition(win);
+            if(mousePos.x >= 0 && mousePos.x < xres && mousePos.y >= 0 && mousePos.y < yres)
+                if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+                    gameState = MENU;
         }
+
+        for(int i = 0; i < 3; ++i)
+        {
+            snake[i] = defaultPos[i];
+        }
+        snakeLength = 3;
     }
 
     return 0;
