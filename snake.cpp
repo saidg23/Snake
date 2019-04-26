@@ -72,7 +72,6 @@ int main()
     int yres = 600;
     int delayVal = 50;
     sf::RenderWindow win(sf::VideoMode(xres, yres), "SNAKE? SNAAAAAAAAAAAAAKE!!!", sf::Style::Default, settings);
-    win.setFramerateLimit(240);
 
     int gridX = 20;
     int gridY = 20;
